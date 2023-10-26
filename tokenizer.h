@@ -24,6 +24,7 @@ struct Token {
 extern Token *NewToken(void);
 extern void FreeToken(Token *);
 extern int Tokenize(FILE *, Token **ret);
+extern int TokenizeStr(char *, Token **ret);
 extern void PrintTokens(Token *, FILE *);
 
 #endif

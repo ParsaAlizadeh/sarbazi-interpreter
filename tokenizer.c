@@ -28,6 +28,12 @@ int Tokenize(FILE *file, Token **ret) {
             break;
         if (isspace(c))
             continue;
+        if (c == ';') {
+            do
+                c = getc(file);
+            while (c != EOF && c != '\n');
+            continue;
+        }
         tok = NewToken();
         *ret = tok;
         if (c == ',') {
@@ -68,6 +74,15 @@ int Tokenize(FILE *file, Token **ret) {
 fail:
     FreeToken(*final);
     return -1;
+}
+
+int TokenizeStr(char *str, Token **ret) {
+    FILE *f;
+    if ((f = fmemopen(str, strlen(str), "r")) == NULL)
+        eprintf("TokenizeStr: fmemopen failed:");
+    int i = Tokenize(f, ret);
+    fclose(f);
+    return i;
 }
 
 void PrintTokens(Token *tok, FILE *file) {
