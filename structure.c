@@ -26,10 +26,11 @@ Program *CreateProgram(Token *tok) {
             ins->next = NULL;
             *next = ins;
             next = &ins->next;
-            while (tok->next != NULL && tok->next->type != TOK_LABEL && tok->next->type != TOK_COMMAND)
+            while (tok->next != NULL && (tok->next->type == TOK_COMMA || TokenIsOp(tok->next)))
                 tok = tok->next;
         } else {
-            eprintf("Bad token");
+            FreeProgram(p);
+            return NULL;
         }
     }
     return p;
@@ -47,7 +48,7 @@ Token *TokenNextOperand(Token *tok) {
         tok = tok->next;
     if (tok == NULL)
         return NULL;
-    if (tok->type == TOK_LABEL || tok->type == TOK_COMMAND)
+    if (!TokenIsOp(tok))
         return NULL;
     return tok;
 }
@@ -90,6 +91,10 @@ Token *InstructOpReg(Instruct *ins, int n) {
 
 Token *InstructOpData(Instruct *ins, int n) {
     return InstructOpType(ins, n, TOK_OP_DATA);
+}
+
+Token *InstructOpIndr(Instruct *ins, int n) {
+    return InstructOpType(ins, n, TOK_OP_INDR);
 }
 
 int InstructMatchToken(Instruct *ins, Token *tok) {
@@ -157,6 +162,9 @@ void PrintProgram(Program *p, FILE *f) {
                 break;
             case TOK_OP_DATA:
                 fprintf(f, "#%d", tok->num);
+                break;
+            case TOK_OP_INDR:
+                fprintf(f, "(%s)", tok->name);
                 break;
             default:
                 fprintf(f, "?");

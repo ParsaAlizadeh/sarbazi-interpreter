@@ -18,6 +18,9 @@ void FreeToken(Token *tok) {
     free(tok);
 }
 
+#define STR2(x) #x
+#define STR(x) STR2(x)
+
 int Tokenize(FILE *file, Token **ret) {
     Token **final = ret;
     Token *tok;
@@ -52,13 +55,19 @@ int Tokenize(FILE *file, Token **ret) {
             tok->num = data;
         } else if (c == '@') {
             tok->type = TOK_OP_ADDR;
-            if (fscanf(file, "%12[^, \n]", tok->name) != 1)
+            if (fscanf(file, "%"STR(TOKEN_NNAME)"[^, \n]", tok->name) != 1)
+                goto fail;
+        } else if (c == '(') {
+            tok->type = TOK_OP_INDR;
+            if (fscanf(file, "%"STR(TOKEN_NNAME)"[^)]", tok->name) != 1)
+                goto fail;
+            if ((c = getc(file)) != ')')
                 goto fail;
         } else {
             tok->type = TOK_COMMAND;
             char *name = tok->name;
             name[0] = c;
-            if (fscanf(file, "%11[^, \n]", name+1) != 1)
+            if (fscanf(file, "%"STR(TOKEN_NNAME)"[^, \n]", name+1) != 1)
                 goto fail;
             int n = strlen(name);
             if (name[n-1] == ':') {
@@ -107,6 +116,17 @@ void PrintTokens(Token *tok, FILE *file) {
     case TOK_OP_REG:
         fprintf(file, " R%d", tok->num);
         break;
+    case TOK_OP_INDR:
+        fprintf(file, " (%s)", tok->name);
+        break;
+    default:
+        fprintf(file, " ?");
+        break;
     }
     PrintTokens(tok->next, file);
+}
+
+int TokenIsOp(Token *tok) {
+    TokenType type = tok->type;
+    return type != TOK_LABEL && type != TOK_COMMAND && type != TOK_COMMA;
 }

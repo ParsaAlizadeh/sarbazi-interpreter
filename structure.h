@@ -32,6 +32,7 @@ extern Token *InstructOpType(Instruct *, int n, TokenType type);
 extern Token *InstructOpAddr(Instruct *, int n);
 extern Token *InstructOpReg(Instruct *, int n);
 extern Token *InstructOpData(Instruct *, int n);
+extern Token *InstructOpIndr(Instruct *, int n);
 extern int InstructMatchToken(Instruct *, Token *);
 extern int InstructMatch(Instruct *, char *str);
 extern int InstructMatchN(Instruct *ins, ...);
