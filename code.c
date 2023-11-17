@@ -101,7 +101,11 @@ int CodeFlush(CodeStream *cs) {
             fprintf(cs->out, "%c", 'A' + r - 10);
     }
     fprintf(cs->out, "\n");
+    CodeClear(cs);
+    return 0;
+}
+
+void CodeClear(CodeStream *cs) {
     fclose(cs->line);
     cs->line = NULL;
-    return 0;
 }

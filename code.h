@@ -17,5 +17,6 @@ extern int CodeWriteBits(CodeStream *, char *str);
 extern int CodeWriteInt(CodeStream *, int, int nbit);
 extern int CodeWrite(CodeStream *, char *fmt, ...);
 extern int CodeFlush(CodeStream *);
+extern void CodeClear(CodeStream *);
 
 #endif
