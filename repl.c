@@ -59,7 +59,7 @@ CodeStream *code;
 static void Process(FILE *stream) {
     for (;;) {
         errno = 0;
-        if (getline(&line, &n, stdin) == -1) {
+        if (getline(&line, &n, stream) == -1) {
             if (errno != 0)
                 eprintf("Exit:");
             break;
@@ -91,21 +91,10 @@ static void Process(FILE *stream) {
         for (; fmi != NULL && cmi != NULL; fmi = fmi->tail, cmi = cmi->tail) {
             char *fmih = fmi->head;
             char *cmih = cmi->head;
-            if (strcmp("X", fmih) == 0) {
-                int hx;
-                if (sscanf(cmih, "%x", &hx) < 1) {
-                    error = "Failed reading hex";
-                    goto bail;
-                }
-                if (CodeWriteInt(code, hx, strlen(cmih) * 4) == -1) {
-                    error = "Failed writing hex";
-                    goto bail;
-                }
-                continue;
-            }
-            if (fmih[strlen(fmih)-1] == 'D') {
+            int nfmih = strlen(fmih);
+            if (fmih[nfmih-1] == 'D' || fmih[nfmih-1] == 'X') {
                 int d;
-                if (sscanf(cmih, "%d", &d) < 1) {
+                if (sscanf(cmih, (fmih[nfmih-1] == 'X' ? "%x" :"%d"), &d) < 1) {
                     error = "Failed reading numeric";
                     goto bail;
                 }
@@ -134,8 +123,19 @@ static void Process(FILE *stream) {
     }
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
     code = NewCode(stdout);
+    if (argc > 1) {
+        for (int i = 1; i < argc; i++) {
+            FILE *f = fopen(argv[i], "r");
+            if (f == NULL) {
+                weprintf("Failed openning file %s, ignoring:", argv[i]);
+                continue;
+            }
+            Process(f);
+            fclose(f);
+        }
+    }
     Process(stdin);
     for (List *i = formats; i != NULL; i = i->tail) {
         for (List *j = i->head; j != NULL; j = j->tail)

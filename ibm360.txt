@@ -1,0 +1,5 @@
+rr 8X 4D 4D
+rx 8X 4D 4D 4D 12X
+rs 8X 4D 4D 4D 12X
+si 8X 8D 4D 12X
+ss 8X 8D 4D 12X 4D 12X

@@ -63,6 +63,7 @@ int CodeWrite(CodeStream *cs, char *fmt, ...) {
                     goto fail;
             break;
         case 'D':
+        case 'X':
             x = va_arg(ap, int);
             if (nbit == 0)
                 nbit = va_arg(ap, int);
