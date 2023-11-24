@@ -7,7 +7,7 @@
 
 typedef struct List List;
 struct List {
-    void *head;
+    void *head; /* mallocated string */
     List *tail;
 };
 
@@ -42,84 +42,88 @@ static size_t Length(List *l) {
     return 1 + Length(l->tail);
 }
 
-enum {
-    NBUF = 1024,
-};
+static List *GetWords(char *line) {
+    List *l = NULL;
+    char *p, *tok;
+    for (p = line; (tok = strtok(p, " \n\t")) != NULL; p = NULL) {
+        l = Cons(estrdup(tok), l);
+    }
+    return Reverse(l);
+}
 
-char fmtbuf[NBUF], buf[NBUF];
+char *line = NULL;
+size_t n = 0;
 List *formats = NULL;
 CodeStream *code;
 
 static void Process(FILE *stream) {
     for (;;) {
-        if (fscanf(stream, fmtbuf, buf) < 0)
+        errno = 0;
+        if (getline(&line, &n, stream) == -1) {
+            if (errno != 0)
+                eprintf("Exit:");
             break;
-        List *format = NULL;
+        }
+        List *cmd = GetWords(line);
+        size_t ncmd = Length(cmd);
+        if (cmd == NULL)
+            continue;
+        List *f = NULL;
         for (List *l = formats; l != NULL; l = l->tail) {
-            List *f = l->head;
-            char *t = f->head;
-            if (strcmp(t, buf) == 0) {
-                format = f;
+            if (strcmp(((List *)l->head)->head, cmd->head) == 0 && Length(l->head) == ncmd) {
+                f = l->head;
                 break;
             }
         }
-        if (format == NULL) {
-            List *cmd = Cons(estrdup(buf), NULL);
-            for (;;) {
-                if (fscanf(stream, fmtbuf, buf) < 1)
-                    break;
-                if (strcmp(buf, ";") == 0)
-                    break;
-                cmd = Cons(estrdup(buf), cmd);
-            }
-            cmd = Reverse(cmd);
+        if (f == NULL) {
+            formats = Cons(cmd, formats);
             for (List *l = cmd; l != NULL; l = l->tail) {
-                printf("%s ", (char *)l->head);
+                printf("%s", (char *)l->head);
+                if (l->tail != NULL)
+                    printf(" ");
             }
             printf("\n");
-            formats = Cons(cmd, formats);
             continue;
         }
         char *error = NULL;
-        List *fh = format->tail;
-        for (; fh != NULL && fh->tail != NULL; fh = fh->tail->tail) {
-            char *typ = fh->tail->head;
-            int ntyp = strlen(typ);
-            printf("%s? ", (char *)fh->head);
-            if (typ[ntyp-1] == 'D' || typ[ntyp-1] == 'X') {
+        List *fmi = f->tail;
+        List *cmi = cmd->tail;
+        for (; fmi != NULL && cmi != NULL; fmi = fmi->tail, cmi = cmi->tail) {
+            char *fmih = fmi->head;
+            char *cmih = cmi->head;
+            int nfmih = strlen(fmih);
+            if (fmih[nfmih-1] == 'D' || fmih[nfmih-1] == 'X') {
                 int d;
-                if (fscanf(stream, (typ[ntyp-1] == 'D' ? "%d" : "%x"), &d) < 1) {
-                    error = "failed reading numeric";
+                if (sscanf(cmih, (fmih[nfmih-1] == 'X' ? "%x" :"%d"), &d) < 1) {
+                    error = "Failed reading numeric";
                     goto bail;
                 }
-                if (CodeWrite(code, typ, d) == -1) {
-                    error = "failed writing numeric";
+                if (CodeWrite(code, fmih, d) == -1) {
+                    error = "Failed writing numeric";
                     goto bail;
                 }
                 continue;
             }
-            if (fscanf(stream, fmtbuf, buf) < 1) {
-                error = "failed reading string";
-                goto bail;
-            }
-            if (CodeWrite(code, typ, buf) == -1) {
-                error = "failed writing string";
+            if (CodeWrite(code, fmih, cmih) == -1) {
+                error = "Failed writing misc";
                 goto bail;
             }
         }
         if (CodeFlush(code) == -1) {
-            error = "number of bits is not a multiple of 4";
+            error = "Line is not a multiple of 4";
             CodeClear(code);
             goto bail;
         }
     bail:
         if (error != NULL)
-            weprintf("error: %s", error);
+            weprintf("Error: %s", error);
+        for (List *l = cmd; l != NULL; l = l->tail)
+            free(l->head);
+        FreeList(cmd);
     }
 }
 
 int main(int argc, char *argv[]) {
-    snprintf(fmtbuf, NBUF, " %%%ds", NBUF);
     code = NewCode(stdout);
     if (argc > 1) {
         for (int i = 1; i < argc; i++) {
@@ -140,5 +144,6 @@ int main(int argc, char *argv[]) {
     }
     FreeCode(code);
     FreeList(formats);
+    free(line);
     return EXIT_SUCCESS;
 }
