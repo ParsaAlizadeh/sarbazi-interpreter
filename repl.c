@@ -85,7 +85,7 @@ static void Process(FILE *stream) {
         for (; fh != NULL && fh->tail != NULL; fh = fh->tail->tail) {
             char *typ = fh->tail->head;
             int ntyp = strlen(typ);
-            printf("%s? ", (char *)fh->head);
+            printf("%s (%s)? ", (char *)fh->head, typ);
             if (typ[ntyp-1] == 'D' || typ[ntyp-1] == 'X') {
                 int d;
                 if (fscanf(stream, (typ[ntyp-1] == 'D' ? "%d" : "%x"), &d) < 1) {
